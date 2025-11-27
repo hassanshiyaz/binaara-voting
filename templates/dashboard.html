@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Voting Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            margin: 0; 
+            background: #1e1e2f; 
+            color: #f0f0f0; 
+        }
+        h1 { text-align: center; margin-bottom: 40px; color: #ffd700; }
+        h2 { margin-top: 40px; margin-bottom: 10px; color: #ffffff; }
+        .chart-container {
+            width: 100%;
+            max-width: 100%;
+            margin-bottom: 40px;
+        }
+        canvas {
+            width: 100% !important;
+            height: 400px !important;
+        }
+        .winner {
+            text-align: right; 
+            font-weight: 900; 
+            font-size: 28px; 
+            color: gold; 
+            text-shadow: 0 0 10px rgba(255,215,0,0.8), 1px 1px 4px rgba(0,0,0,0.5);
+            margin-top: 10px;
+        }
+        .winner::before { content: "👑 "; }
+        @media (max-width: 768px) {
+            canvas { height: 300px !important; }
+            .winner { font-size: 22px; }
+        }
+        @media (max-width: 480px) {
+            canvas { height: 250px !important; }
+            .winner { font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Live Voting Dashboard</h1>
+
+    <h2>Best Male Staff</h2>
+    <div class="chart-container">
+        <canvas id="maleChart"></canvas>
+        <div class="winner">Winner: <span id="maleWinner"></span></div>
+    </div>
+
+    <h2>Best Female Staff</h2>
+    <div class="chart-container">
+        <canvas id="femaleChart"></canvas>
+        <div class="winner">Winner: <span id="femaleWinner"></span></div>
+    </div>
+
+    <script>
+        function getWinner(data){
+            const entries = Object.entries(data);
+            if(entries.length === 0) return "";
+            const max = Math.max(...entries.map(e=>e[1]));
+            const winner = entries.find(e=>e[1]===max);
+            return winner ? winner[0] : "";
+        }
+
+        function getTop10(data){
+            return Object.fromEntries(
+                Object.entries(data)
+                      .sort((a,b)=>b[1]-a[1])
+                      .slice(0,10)
+            );
+        }
+
+        const maleChart = new Chart(document.getElementById("maleChart"), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Votes', data: [], backgroundColor: [], borderRadius:5 }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { 
+                        anchor: 'end',
+                        align: 'end',
+                        color: '#ffffff',
+                        font: { weight: 'bold', size: 14 },
+                        formatter: value => value
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#ffffff' } },
+                    y: { grid: { display: false }, ticks: { display: false }, beginAtZero: true }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        const femaleChart = new Chart(document.getElementById("femaleChart"), {
+            type: 'bar',
+            data: { labels: [], datasets: [{ label: 'Votes', data: [], backgroundColor: [], borderRadius:5 }] },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    datalabels: { 
+                        anchor: 'end',
+                        align: 'end',
+                        color: '#ffffff',
+                        font: { weight: 'bold', size: 14 },
+                        formatter: value => value
+                    }
+                },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#ffffff' } },
+                    y: { grid: { display: false }, ticks: { display: false }, beginAtZero: true }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
+        function updateChart(chart, data, winnerId){
+            const topData = getTop10(data);
+            chart.data.labels = Object.keys(topData);
+            chart.data.datasets[0].data = Object.values(topData);
+            chart.data.datasets[0].backgroundColor = Object.keys(topData).map(_=>`hsl(${Math.floor(Math.random()*360)},70%,60%)`);
+            chart.update();
+            document.getElementById(winnerId).innerText = getWinner(data);
+        }
+
+        async function fetchVotes(){
+            const res = await fetch("/api/results");
+            const data = await res.json();
+            updateChart(maleChart, data.male, "maleWinner");
+            updateChart(femaleChart, data.female, "femaleWinner");
+        }
+
+        fetchVotes();
+
+        const socket = io();
+        socket.on("vote_update", data=>{
+            updateChart(maleChart, data.male, "maleWinner");
+            updateChart(femaleChart, data.female, "femaleWinner");
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>VOTE FOR BEST DRESSED STAFF</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css"/>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #1e1e2f, #2a2a45);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            padding: 30px;
+        }
+
+        .header-main {
+            text-align: center;
+            font-size: 36px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #ffd700;
+        }
+
+        .header-sub {
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            color: #ffffff;
+        }
+
+        .card {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        label {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            display: block;
+            color: #333;
+        }
+
+        input, select { 
+            width: 100%; 
+            padding: 14px; 
+            font-size: 16px; 
+            margin-bottom: 20px; 
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus, select:focus {
+            border-color: #02a17e;
+            box-shadow: 0 0 5px rgba(2,161,126,0.5);
+        }
+
+        button { 
+            padding: 14px 20px; 
+            font-size: 18px; 
+            width: 100%; 
+            cursor: pointer;
+            background: #02a17e;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            transition: 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #028f6e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header-main">BINAARA STAFF NIGHT</div>
+        <div class="header-sub">Vote for Best Dressed Staff</div>
+
+        <div class="card">
+            <label>Email Address:</label>
+            <input type="email" id="email" placeholder="Enter your office email" required>
+
+            <label>Vote for Best Male Staff:</label>
+            <select id="maleSelect"></select>
+
+            <label>Vote for Best Female Staff:</label>
+            <select id="femaleSelect"></select>
+
+            <button id="submitVoteBtn">Submit Vote</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script>
+        const maleDropdown = new Choices("#maleSelect", { searchEnabled: true, placeholderValue: "Select male staff" });
+        const femaleDropdown = new Choices("#femaleSelect", { searchEnabled: true, placeholderValue: "Select female staff" });
+
+        async function loadNames(endpoint, dropdown){
+            try {
+                const res = await fetch(endpoint);
+                const names = await res.json();
+                dropdown.setChoices(names.map(n=>({value:n,label:n})),"value","label",true);
+            } catch {
+                dropdown.setChoices([{value:"",label:"Error loading names"}],"value","label",true);
+            }
+        }
+
+        loadNames("/api/male", maleDropdown);
+        loadNames("/api/female", femaleDropdown);
+
+        document.getElementById("submitVoteBtn").onclick = async () => {
+            const email = document.getElementById("email").value.trim();
+            const male = maleDropdown.getValue(true);
+            const female = femaleDropdown.getValue(true);
+            if(!email){ alert("Please enter your email."); return; }
+            if(!male || !female){ alert("Please select both names."); return; }
+
+            const res = await fetch("/vote", {
+                method:"POST",
+                headers: {"Content-Type":"application/json"},
+                body: JSON.stringify({email,male,female})
+            });
+            const data = await res.json();
+            if(data.success){
+                alert("🎉 Thank you for voting!");
+                document.getElementById("email").value = "";
+                maleDropdown.clearStore();
+                femaleDropdown.clearStore();
+                loadNames("/api/male", maleDropdown);
+                loadNames("/api/female", femaleDropdown);
+            }else{
+                alert(data.error || "Vote failed.");
+            }
+        };
+    </script>
+</body>
+</html>

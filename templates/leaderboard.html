@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Leaderboard</title>
+<style>
+body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+table { margin: 0 auto; border-collapse: collapse; width: 50%; }
+th, td { border:1px solid #000; padding:8px; text-align:center; }
+</style>
+</head>
+<body>
+<h1>Live Vote Leaderboard</h1>
+
+<h2>Best Male Staff</h2>
+<table id="maleTable"><tr><th>Name</th><th>Votes</th></tr></table>
+
+<h2>Best Female Staff</h2>
+<table id="femaleTable"><tr><th>Name</th><th>Votes</th></tr></table>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const socket = io();
+
+function updateTable(id, data){
+    const table = document.getElementById(id);
+    table.innerHTML = "<tr><th>Name</th><th>Votes</th></tr>";
+    for(let name in data){
+        let row = table.insertRow();
+        row.insertCell(0).innerText = name;
+        row.insertCell(1).innerText = data[name];
+    }
+}
+
+socket.on("updateVotes", votes=>{
+    updateTable("maleTable", votes.male);
+    updateTable("femaleTable", votes.female);
+});
+</script>
+</body>
+</html>
